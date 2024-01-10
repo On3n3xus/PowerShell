@@ -1,0 +1,23 @@
+# Import the email addresses from the text file
+$emailAddresses = Get-Content -Path "C:\Documents\EmailAddresses.txt"
+
+# Create an array to store the results
+$results = @()
+
+# Loop through each email address
+foreach ($email in $emailAddresses) {
+    # Find the user associated with the email address
+    $user = Get-ADUser -Filter { EmailAddress -eq $email } -Properties proxyAddresses
+
+    # Create a custom object to store the email address, username, and the associated proxyAddresses
+    $result = New-Object -TypeName PSObject
+    $result | Add-Member -MemberType NoteProperty -Name "Email" -Value $email
+    $result | Add-Member -MemberType NoteProperty -Name "Username" -Value $user.SamAccountName
+    $result | Add-Member -MemberType NoteProperty -Name "proxyAddresses" -Value ($user.proxyAddresses -join ', ')
+
+    # Add the result to the results array
+    $results += $result
+}
+
+# Export the results to a CSV file
+$results | Export-Csv -Path "C:\Documents\Results.csv" -NoTypeInformation
