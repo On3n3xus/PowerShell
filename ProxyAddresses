@@ -1,23 +1,46 @@
-# Import the email addresses from the text file
-$emailAddresses = Get-Content -Path "C:\Documents\EmailAddresses.txt"
+# Import the Active Directory module for the Get-ADUser cmdlet
+Import-Module ActiveDirectory
 
-# Create an array to store the results
-$results = @()
+# Specify the file containing the email addresses
+$EmailAddressesFile = "C:\PowershellScript\EmailAddresses.txt"
+
+# Specify the output CSV file
+$OutputFile = "C:\PowershellScript\ProxyAddresses.csv"
+
+# Read the email addresses from the file
+$EmailAddresses = Get-Content $EmailAddressesFile
+
+# Create an empty array to hold the output data
+$OutputData = @()
 
 # Loop through each email address
-foreach ($email in $emailAddresses) {
-    # Find the user associated with the email address
-    $user = Get-ADUser -Filter { EmailAddress -eq $email } -Properties proxyAddresses
+foreach ($EmailAddress in $EmailAddresses) {
+    # Get the user with the specified email address
+    $User = Get-ADUser -Filter { EmailAddress -eq $EmailAddress } -Properties proxyAddresses, SamAccountName
 
-    # Create a custom object to store the email address, username, and the associated proxyAddresses
-    $result = New-Object -TypeName PSObject
-    $result | Add-Member -MemberType NoteProperty -Name "Email" -Value $email
-    $result | Add-Member -MemberType NoteProperty -Name "Username" -Value $user.SamAccountName
-    $result | Add-Member -MemberType NoteProperty -Name "proxyAddresses" -Value ($user.proxyAddresses -join ', ')
+    # Check if the user was found
+    if ($User -ne $null) {
+        # Create a custom object to hold the output data for this user
+        $UserData = New-Object PSObject -Property @{
+            EmailAddress = $EmailAddress
+            Username = $User.SamAccountName
+        }
 
-    # Add the result to the results array
-    $results += $result
+        # Get the SMTP addresses
+        $SmtpAddresses = $User.proxyAddresses | Where-Object { $_ -like "SMTP:*" }
+
+        # Add the SMTP addresses to the custom object
+        for ($i = 0; $i -lt $SmtpAddresses.Count; $i++) {
+            $UserData | Add-Member -MemberType NoteProperty -Name "SMTPAddress$($i + 1)" -Value $SmtpAddresses[$i]
+        }
+
+        # Add the custom object to the output data
+        $OutputData += $UserData
+    } else {
+        # Output a message indicating that the user was not found
+        Write-Output "User with email address ${EmailAddress} not found"
+    }
 }
 
-# Export the results to a CSV file
-$results | Export-Csv -Path "C:\Documents\Results.csv" -NoTypeInformation
+# Export the output data to the CSV file
+$OutputData | Export-Csv $OutputFile -NoTypeInformation
