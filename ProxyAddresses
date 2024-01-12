@@ -2,10 +2,10 @@
 Import-Module ActiveDirectory
 
 # Specify the file containing the email addresses
-$EmailAddressesFile = "C:\PowershellScript\EmailAddresses.txt"
+$EmailAddressesFile = "C:\\PowershellScript\\EmailAddresses.txt"
 
 # Specify the output CSV file
-$OutputFile = "C:\PowershellScript\ProxyAddresses.csv"
+$OutputFile = "C:\\PowershellScript\\ProxyAddresses.csv"
 
 # Read the email addresses from the file
 $EmailAddresses = Get-Content $EmailAddressesFile
@@ -16,7 +16,7 @@ $OutputData = @()
 # Loop through each email address
 foreach ($EmailAddress in $EmailAddresses) {
     # Get the user with the specified email address
-    $User = Get-ADUser -Filter { EmailAddress -eq $EmailAddress } -Properties proxyAddresses, SamAccountName
+    $User = Get-ADUser -Filter "proxyAddresses -like 'SMTP:*$($EmailAddress)*'" -Properties proxyAddresses, SamAccountName
 
     # Check if the user was found
     if ($User -ne $null) {
